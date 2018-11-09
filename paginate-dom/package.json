@@ -1,0 +1,34 @@
+{
+  "name": "paginate-dom",
+  "version": "1.0.0",
+  "description": "Paginate a DOM element content for printing",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "files": [
+    "dist/**.js",
+    "dist/**.d.ts",
+    "base.css"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Clikengo/markdown-print-tools.git"
+  },
+  "keywords": [
+    "dom",
+    "paginate",
+    "print"
+  ],
+  "author": "Vincent Rouillé <v.rouille@clikengo.com> (https://github.com/Speedy37)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Clikengo/markdown-print-tools/issues"
+  },
+  "homepage": "https://github.com/Clikengo/markdown-print-tools/paginate-dom",
+  "devDependencies": {
+    "typescript": "^3.1.6"
+  }
+}

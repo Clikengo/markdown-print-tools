@@ -1,0 +1,93 @@
+hr {
+    margin: 0;
+    height: 0;
+    border: none;
+    padding: 0;
+}
+
+/** Page layout **/
+html {
+	background: #eee;
+}
+
+/** Preview layout */
+.__container {
+  position: relative;
+	background: white;
+	border: 1px solid #ddd;
+}
+.__container hr {
+	outline: 1px solid #ddd;
+}
+.__willcut {
+	outline: 1px solid red;
+	position: relative;
+}
+.__willcut::after {
+	content: "";
+	position: absolute;
+	top: 25.7cm;
+	left: 0;
+	right: 0;
+	border-bottom: 2px solid #7100ff;
+	z-index: 10000;
+}
+.__expected_cut {
+	position: absolute;
+	left: 0;
+	right: 0;
+	border-bottom: 1px solid green;
+}
+
+/** Print layout */
+body, .page {
+	position: relative;
+}
+header, footer {
+	box-sizing: border-box;
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2cm;
+	left: 0;
+	right: 0;
+}
+header {
+	top: 0;
+	border-bottom: 1px dotted #eee;
+}
+footer {
+	bottom: 0;
+	border-top: 1px dotted #eee;
+}
+body.pages {
+	padding: 0.5cm;
+}
+
+.page {
+	box-sizing: border-box;
+	margin: 0.5cm auto;
+	background: white;
+    border: 1px solid #ddd;
+    position: relative;
+}
+
+@media print {
+    html, body.pages {
+        background: white;
+    }
+	header, footer {
+		border: none;
+	}
+	body.pages {
+		margin: 0;
+		padding: 0;
+	}
+	.page {
+		margin: 0;
+		border: none;
+		page-break-after: always;
+		page-break-inside: avoid;
+	}
+}
