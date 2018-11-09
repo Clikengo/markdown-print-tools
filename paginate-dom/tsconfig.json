@@ -4,8 +4,9 @@
         "target": "es6",
         "outDir": "dist",
         "sourceMap": true,
-        "strict": true, 
+        "strict": true,
         "declaration": true,
+        "newLine": "LF",
     },
     "files": [
         "index.ts",

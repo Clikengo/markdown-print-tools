@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as program from 'commander';
 import {readFileSync, writeFileSync } from 'fs';
 import renderPdf from './index';

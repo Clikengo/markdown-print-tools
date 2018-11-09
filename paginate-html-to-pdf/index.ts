@@ -1,4 +1,3 @@
-import * as MarkdownIt from 'markdown-it';
 import * as puppeteer from 'puppeteer';
 import * as path from 'path';
 import paginate, {Page} from 'paginate-dom';
@@ -41,7 +40,7 @@ class PDFWStreamForBuffer
     close(callback: () => void) {
         callback();
     }
-    
+
 }
 
 export default async function renderPdf(options: {

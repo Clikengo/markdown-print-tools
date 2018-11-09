@@ -5,6 +5,10 @@
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**.js",
+    "dist/**.d.ts"
+  ],
   "scripts": {
     "build": "tsc -p ."
   },
@@ -33,10 +37,12 @@
     "markdown-it-sub": "^1.0.0",
     "markdown-it-sup": "^1.0.0",
     "markdown-it-table-of-contents": "^0.4.3",
+    "markdown-it-task-lists": "^2.1.1",
     "markdown-it-texmath": "^0.5.2",
     "paginate-html-to-pdf": "^1.0.0"
   },
   "devDependencies": {
+    "@types/markdown-it": "0.0.7",
     "@types/node": "^10.12.3",
     "typescript": "^3.1.6"
   }

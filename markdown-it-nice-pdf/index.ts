@@ -55,6 +55,9 @@ export default async function renderMarkdownPdf(options: {
     return renderPdf({
         body,
         base_path: options.markdown_path,
-        styles: options.styles,
+        styles: [
+            path.join(__dirname, "../node_modules/katex/dist/katex.css"),
+            ...(options.styles || [])
+        ],
     });
 }

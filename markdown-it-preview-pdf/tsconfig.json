@@ -6,6 +6,7 @@
         "lib": ["es6"],
         "sourceMap": true,
         "strict": true,
+        "newLine": "LF",
     },
     "files": [
         "extension.ts"
