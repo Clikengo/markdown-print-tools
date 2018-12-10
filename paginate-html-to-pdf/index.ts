@@ -69,7 +69,7 @@ export default async function renderPdf(options: {
                         chunks.push(chunk = { paper, containers: [] });
                     chunk.containers.push(container);
                     container.style.display = "none";
-                    for (let el of container.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+                    for (let el of container.querySelectorAll("h2, h3, h4")) {
                         toc_marks.push({ title: el.textContent, page_idx, tagName: el.tagName });
                     }
                 }
