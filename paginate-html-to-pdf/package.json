@@ -1,6 +1,6 @@
 {
   "name": "paginate-html-to-pdf",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Render HTML to pdf with a nice pagination",
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
@@ -21,14 +21,17 @@
   "keywords": [
     "dom",
     "paginate",
-    "print"
+    "print",
+    "pdf",
+    "toc",
+    "page-break"
   ],
   "author": "Vincent Rouillé <v.rouille@clikengo.com> (https://github.com/Speedy37)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/Clikengo/markdown-print-tools/issues"
   },
-  "homepage": "https://github.com/Clikengo/markdown-print-tools/markdown-nice-pdf",
+  "homepage": "https://github.com/Clikengo/markdown-print-tools/tree/master/paginate-html-to-pdf",
   "dependencies": {
     "commander": "^2.19.0",
     "hummus": "^1.0.95",

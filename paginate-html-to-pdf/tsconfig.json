@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es6",
-        "lib": ["es6"],
+        "lib": ["es6", "es2017.object"],
         "types": ["node"],
         "outDir": "dist",
         "sourceMap": true,
