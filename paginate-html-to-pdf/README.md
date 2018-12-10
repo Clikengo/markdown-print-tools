@@ -11,6 +11,13 @@ Render an HTML page to pdf with a nice pagination:
  - smart page breaks (tries to keep related stuff in the same page)
  - custom CSS
 
+
+TODO:
+
+ - [ ] access to paginate options (max_overcut, force_cut_tag_names, ...)
+ - [ ] access to TOC generation options
+ - [ ] enhance TOC link precesion from page to element
+
 ## Getting started
 
 __Install:__
