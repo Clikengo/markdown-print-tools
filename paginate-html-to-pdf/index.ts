@@ -128,8 +128,32 @@ export default async function renderPdf(options: {
             const hummus = require('hummus');
             let wbuffer = new PDFWStreamForBuffer(pdf_chunks.reduce<number>((p, c) => p + c.length, 0) * 1.25);
             let w = hummus.createWriter(wbuffer);
+            let ctx = w.getObjectsContext();
+            let events = w.getEvents();
+
+            let page_ids: number[] = [];
+            let combined_dests: ((d: any) => (() => void))[] = [];
             for (let pdf_chunk of pdf_chunks)
-                w.appendPDFPagesFromPDF(new hummus.PDFRStreamForBuffer(pdf_chunk));
+                copyPages(page_ids, combined_dests, w, new hummus.PDFRStreamForBuffer(pdf_chunk));
+            let dests: number | null = null;
+            if (combined_dests.length) {
+                dests = ctx.startNewIndirectObject();
+                let d = ctx.startDictionary();
+                let pendings: (() => void)[] = [];
+                for (let combined_dest of combined_dests)
+                    pendings.push(combined_dest(d));
+                ctx.endDictionary(d);
+                ctx.endIndirectObject();
+                for (let pending of pendings)
+                    pending();
+            }
+            events.on('OnCatalogWrite', (e: any) => {
+                let d = e.catalogDictionaryContext;
+                if (dests !== null) {
+                    d.writeKey("Dests");
+                    d.writeObjectReferenceValue(dests);
+                }
+            });
             w.end();
             return wbuffer.getData();
         }
@@ -138,3 +162,40 @@ export default async function renderPdf(options: {
         browser.close();
     }
 }
+
+function copyPages(page_ids: number[], combined_dests: ((d: any) => (() => void))[], w: any, src: any) {
+    let ctx = w.createPDFCopyingContext(src);
+    let parser = ctx.getSourceDocumentParser();
+
+    for (let i = 0; i < parser.getPagesCount(); i++) {
+        let page_dict = parser.parsePageDictionary(i);
+        let src_page_id = parser.getPageObjectID(i);
+        let reffed_objects: number[] = [];
+        if (page_dict.exists('Annots')) {
+            w.getEvents().once('OnPageWrite', function ({ pageDictionaryContext: d }: any) {
+                d.writeKey('Annots');
+                reffed_objects = ctx.copyDirectObjectWithDeepCopy(page_dict.queryObject('Annots'))
+            })
+        }
+        let page_id  = ctx.appendPDFPageFromPDF(i); // write page. this will trigger the event
+        page_ids.push(page_id);
+        ctx.replaceSourceObjects({ [src_page_id]: page_id });
+
+        if (reffed_objects.length > 0)
+            ctx.copyNewObjectsForDirectObject(reffed_objects)
+    }
+
+    let catalog = parser.queryDictionaryObject(parser.getTrailer(), 'Root');
+    let dests = catalog && parser.queryDictionaryObject(catalog, 'Dests');
+    if (dests) {
+        combined_dests.push((d: any) => {
+            let reffed_objects: number[] = [];
+            for (let [key, value] of Object.entries(dests.toJSObject())) {
+                d.writeKey(key);
+                reffed_objects.push(...ctx.copyDirectObjectWithDeepCopy(value));
+            }
+            return () => ctx.copyNewObjectsForDirectObject(reffed_objects);
+        });
+    }
+}
+
