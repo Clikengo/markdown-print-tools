@@ -31,13 +31,13 @@
   "homepage": "https://github.com/Clikengo/markdown-print-tools/markdown-nice-pdf",
   "dependencies": {
     "commander": "^2.19.0",
-    "hummus": "^1.0.90",
+    "hummus": "^1.0.95",
     "paginate-dom": "^1.0.0",
-    "puppeteer": "^1.10.0"
+    "puppeteer": "^1.11.0"
   },
   "devDependencies": {
-    "@types/node": "^10.12.3",
-    "@types/puppeteer": "^1.10.0",
-    "typescript": "^3.1.6"
+    "@types/node": "^10.12.12",
+    "@types/puppeteer": "^1.10.1",
+    "typescript": "^3.2.2"
   }
 }

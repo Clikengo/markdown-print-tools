@@ -110,9 +110,6 @@ export default async function renderPdf(options: {
         await page.goto(to_web_uri(path.join(__dirname, "../blank.html")));
         await page.emulateMedia('print');
         await page.setContent(html);
-        await new Promise((resolve, reject) => {
-            page.on('load', resolve)
-        });
 
         console.info("Creating pages");
         await page.evaluate(`pdf_chunks()`);
