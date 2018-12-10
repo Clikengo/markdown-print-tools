@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-nice-pdf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Render Markdown to pdf with a nice pagination",
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
@@ -38,12 +38,12 @@
     "markdown-it-sup": "^1.0.0",
     "markdown-it-table-of-contents": "^0.4.3",
     "markdown-it-task-lists": "^2.1.1",
-    "markdown-it-texmath": "^0.5.2",
-    "paginate-html-to-pdf": "^1.0.0"
+    "markdown-it-texmath": "^0.5.3",
+    "paginate-html-to-pdf": "^1.1.0"
   },
   "devDependencies": {
     "@types/markdown-it": "0.0.7",
-    "@types/node": "^10.12.3",
-    "typescript": "^3.1.6"
+    "@types/node": "^10.12.12",
+    "typescript": "^3.2.2"
   }
 }

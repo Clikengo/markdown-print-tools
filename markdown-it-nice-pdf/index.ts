@@ -51,6 +51,7 @@ export default async function renderMarkdownPdf(options: {
     md.use(require("markdown-it-table-of-contents"), { includeLevel: option(options.toc_levels, [2, 3, 4]) });
     md.use(texmath_once(), {delimiters: "dollars" });
 
+    console.info("Markdown to html");
     let body = md.render(options.markdown_content);
     return renderPdf({
         body,
