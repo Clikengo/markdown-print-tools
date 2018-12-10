@@ -61,13 +61,17 @@ export default async function renderPdf(options: {
             ${paginate.toString()}
             async function pdf_chunks() {
                 let pages = paginate();
+                let toc_marks = [];
                 let chunks = [];
-                for (let { paper, container } of pages) {
+                for (let [page_idx, { paper, container }] of pages.entries()) {
                     let chunk = chunks[chunks.length - 1];
                     if (!chunk || JSON.stringify(chunk.paper) !== JSON.stringify(paper))
                         chunks.push(chunk = { paper, containers: [] });
                     chunk.containers.push(container);
                     container.style.display = "none";
+                    for (let el of container.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+                        toc_marks.push({ title: el.textContent, page_idx, tagName: el.tagName });
+                    }
                 }
                 for (let { paper, containers } of chunks) {
                     for (let container of containers)
@@ -76,6 +80,7 @@ export default async function renderPdf(options: {
                     for (let container of containers)
                         container.style.display = "none";
                 }
+                await toc(toc_marks);
             }
         </script>
         <link rel="stylesheet" type="text/css" href="${to_web_uri(path.join(__dirname, "../node_modules/paginate-dom/base.css"))}">
@@ -88,9 +93,10 @@ export default async function renderPdf(options: {
 </html>`;
     const browser = await puppeteer.launch();
     try {
-        console.info("Loading markdown html");
+        console.info("Loading html");
         const page = await browser.newPage();
         let pdf_chunks: Buffer[] = [];
+        let toc: Outline[] = [];
         await page.exposeFunction('pdf', async ({ format, margin, orientation }: Page["paper"]) => {
             let options: Parameters<typeof page.pdf>[0] = {
                 displayHeaderFooter: false,
@@ -107,6 +113,24 @@ export default async function renderPdf(options: {
             console.info(`Creating pdf chunk ${format} ${orientation}`);
             pdf_chunks.push(await page.pdf(options));
         });
+        await page.exposeFunction('toc', async (toc_marks: { title: string, page_idx: number, tagName: string }[]) => {
+            let stack: [number, Outline][] = [];
+            for (let { title, page_idx, tagName } of toc_marks) {
+                let lvl = +tagName.substring(1);
+                while (stack.length && stack[stack.length - 1][0] >= lvl)
+                    stack.pop();
+                let outline = { title, page_idx, };
+                if (stack.length === 0)
+                    toc.push(outline);
+                else {
+                    let top = stack[stack.length - 1][1];
+                    if (!top.childs)
+                        top.childs = [];
+                    top.childs.push(outline);
+                }
+                stack.push([lvl, outline]);
+            }
+        });
         await page.goto(to_web_uri(path.join(__dirname, "../blank.html")));
         await page.emulateMedia('print');
         await page.setContent(html);
@@ -117,9 +141,6 @@ export default async function renderPdf(options: {
         console.info("Writing pdf");
         if (pdf_chunks.length === 0) {
             throw new Error(`nothing to print to pdf`);
-        }
-        else if (pdf_chunks.length === 1) {
-            return pdf_chunks[0];
         }
         else {
             const hummus = require('hummus');
@@ -132,6 +153,8 @@ export default async function renderPdf(options: {
             let combined_dests: ((d: any) => (() => void))[] = [];
             for (let pdf_chunk of pdf_chunks)
                 copyPages(page_ids, combined_dests, w, new hummus.PDFRStreamForBuffer(pdf_chunk));
+
+            let outline = writeOutline(ctx, toc, page_ids);
             let dests: number | null = null;
             if (combined_dests.length) {
                 dests = ctx.startNewIndirectObject();
@@ -146,11 +169,18 @@ export default async function renderPdf(options: {
             }
             events.on('OnCatalogWrite', (e: any) => {
                 let d = e.catalogDictionaryContext;
+                if (outline !== null) {
+                    d.writeKey("Outlines");
+                    d.writeObjectReferenceValue(outline);
+                    d.writeKey("PageMode");
+                    d.writeNameValue("UseOutlines");
+                }
                 if (dests !== null) {
                     d.writeKey("Dests");
                     d.writeObjectReferenceValue(dests);
                 }
             });
+
             w.end();
             return wbuffer.getData();
         }
@@ -196,3 +226,74 @@ function copyPages(page_ids: number[], combined_dests: ((d: any) => (() => void)
     }
 }
 
+type Outline = { title: string, page_idx: number, childs?: Outline[] };
+function writeOutline(ctx: any, outlines: Outline[], page_ids: number[]) : number | null
+{
+    if (outlines.length === 0)
+        return null;
+
+    let outline = ctx.allocateNewObjectID();
+    let outline_ids = writeOutlines(ctx, outlines, outline, page_ids);
+    ctx.startNewIndirectObject(outline);
+    let d = ctx.startDictionary();
+    d.writeKey("Type");
+    d.writeNameValue("Outlines");
+    d.writeKey("Count");
+    d.writeNumberValue(outline_ids.length);
+    d.writeKey("First");
+    d.writeObjectReferenceValue(outline_ids[0]);
+    d.writeKey("Last");
+    d.writeObjectReferenceValue(outline_ids[outline_ids.length - 1]);
+    ctx.endDictionary(d);
+    ctx.endIndirectObject();
+    return outline;
+}
+function writeOutlines(ctx: any, outlines: Outline[], parent: number, page_ids: number[]) : number[]
+{
+    let ids = outlines.map(() => ctx.allocateNewObjectID());
+    outlines.forEach(({ title, page_idx, childs }, i) => {
+        let id = ids[i];
+        let child_ids = childs && childs.length ? writeOutlines(ctx, childs, id, page_ids) : null;
+        ctx.startNewIndirectObject(id);
+        let d = ctx.startDictionary();
+
+        d.writeKey("Title");
+        d.writeLiteralStringValue(title);
+
+        d.writeKey("Parent");
+        d.writeObjectReferenceValue(parent);
+
+        d.writeKey("Dest");
+        ctx.startArray();
+        ctx.writeIndirectObjectReference(page_ids[page_idx]);
+        ctx.writeName("XYZ");
+        let c = ctx.startFreeContext();
+        c.write([ 32, 110, 117, 108, 108, 32, 110, 117, 108, 108, 32, 48, 32 ]/*" null null 0 "*/);
+        ctx.endFreeContext();
+        ctx.endArray();
+        ctx.endLine();
+
+        if (child_ids) {
+            d.writeKey("Count");
+            d.writeNumberValue(outlines.length);
+            d.writeKey("First");
+            d.writeObjectReferenceValue(child_ids[0]);
+            d.writeKey("Last");
+            d.writeObjectReferenceValue(child_ids[child_ids.length - 1]);
+        }
+
+        if (i + 1 < ids.length) {
+            d.writeKey("Next");
+            d.writeObjectReferenceValue(ids[i + 1]);
+        }
+
+        if (i > 0) {
+            d.writeKey("Prev");
+            d.writeObjectReferenceValue(ids[i - 1]);
+        }
+
+        ctx.endDictionary(d);
+        ctx.endIndirectObject();
+    });
+    return ids;
+}
