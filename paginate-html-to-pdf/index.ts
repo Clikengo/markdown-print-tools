@@ -33,6 +33,10 @@ class PDFWStreamForBuffer
         return bytes.length;
     }
 
+    getData() {
+        return this.data.slice(0, this.getCurrentPosition());
+    }
+
     getCurrentPosition() {
         return this._position;
     }
@@ -127,7 +131,7 @@ export default async function renderPdf(options: {
             for (let pdf_chunk of pdf_chunks)
                 w.appendPDFPagesFromPDF(new hummus.PDFRStreamForBuffer(pdf_chunk));
             w.end();
-            return wbuffer.data;
+            return wbuffer.getData();
         }
     }
     finally {
