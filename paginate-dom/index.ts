@@ -129,7 +129,7 @@ export default function paginate(options: {
     let expected_page_bottom: number;
     let header: HTMLElement | null = null;
     let footer: HTMLElement | null = null;
-    let cut_elements = new Set<HTMLElement>();
+    let cut_elements = new Set<Node>();
     let last_cutable_tag_name: string = "HEADER";
 
     ///////////////
@@ -258,7 +258,6 @@ export default function paginate(options: {
                         ) &&
                         !cut_elements.has(node)
                     ) {
-                        cut_elements.add(node);
                         return { tagName: node.tagName, node, top: rect.top, bottom: rect.bottom };
                     }
                 }
@@ -481,7 +480,6 @@ export default function paginate(options: {
                         let li: Node | null = cut_node.firstChild;
                         let stop_li = next_cut.node.nextSibling;
                         let start = (cut_node as HTMLOListElement).start;
-                        console.info(li, stop_li);
                         while (li && li !== stop_li) {
                             if (li.nodeName === "LI")
                                 start++;
@@ -592,6 +590,7 @@ export default function paginate(options: {
                 let outer = stack[0];
                 let closest = stack[stack.length - 1];
                 let original_closest = { ...closest };
+                cut_elements.add(closest.node);
 
                 // find the real closest node with consideration of inline nodes (span, b, #text)
                 // this assume white-space: normal to work correctly
