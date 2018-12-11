@@ -53,6 +53,8 @@ export default async function renderPdf(options: {
     body: string,
     base_path: string,
     styles?: string[],
+    html?: boolean,
+    debug?: boolean,
 }) : Promise<Buffer> {
     let body = options.body;
     let html = `<!DOCTYPE html>
@@ -65,10 +67,12 @@ export default async function renderPdf(options: {
                 // workaround svg print bugs
                 for (let svg_el of document.querySelectorAll('img[src$=".svg"i]')) {
                     if (svg_el.src.startsWith('file:///')) {
+                        let src = svg_el.src;
                         let data = await load_svg(svg_el.src);
                         let svg_virtual = document.createElement('div');
                         svg_virtual.innerHTML = data;
                         let svg = svg_virtual.firstElementChild;
+                        let fixes = 0;
                         for (let g of svg.querySelectorAll('g')) {
                             let opacity = g.style.opacity;
                             if (opacity) {
@@ -77,22 +81,26 @@ export default async function renderPdf(options: {
                                         child.style.opacity = opacity;
                                 }
                                 g.style.removeProperty("opacity");
+                                fixes++;
                             }
                         }
-                        let xml = new XMLSerializer().serializeToString(svg);
-                        let blob = new Blob([xml], {type : 'image/svg+xml' });
-                        let url = URL.createObjectURL(blob);
-                        svg_el.src = url;
-                        await new Promise((resolve, reject) => {
-                            svg_el.onload = resolve;
-                            svg_el.onerror = reject;
-                        });
+                        if (fixes > 0) {
+                            let xml = new XMLSerializer().serializeToString(svg);
+                            let blob = new Blob([xml], {type : 'image/svg+xml' });
+                            let url = URL.createObjectURL(blob);
+                            svg_el.src = url;
+                            await new Promise((resolve, reject) => {
+                                svg_el.onload = resolve;
+                                svg_el.onerror = reject;
+                            });
+                        }
                     }
                 }
             }
             async function pdf_chunks() {
-                await fix_svg();
-                let pages = paginate();
+                ${!options.html ? "await fix_svg();" : ""}
+                let pages = paginate(${options.debug ? "{ DEBUG: true, TRACE: true }" : ""});
+                ${options.debug || options.html ? "return;" : ""}
                 let toc_marks = [];
                 let chunks = [];
                 for (let [page_idx, { paper, container }] of pages.entries()) {
@@ -123,7 +131,7 @@ export default async function renderPdf(options: {
         ${body}
     </body>
 </html>`;
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({ headless: !options.debug });
     try {
         console.info("Loading html");
         const page = await browser.newPage();
@@ -176,6 +184,20 @@ export default async function renderPdf(options: {
 
         console.info("Creating pages");
         await page.evaluate(`pdf_chunks()`);
+
+        if (options.debug) // infinite await
+            await new Promise(() => {});
+
+        if (options.html) {
+            console.info("Getting html");
+            await page.evaluate(`
+                for (let script of document.querySelectorAll('script')) {
+                    script.parentNode.removeChild(script);
+                }
+            `);
+            return Buffer.from(await page.content(), "utf8");
+        }
+
 
         console.info("Writing pdf");
         if (pdf_chunks.length === 0) {
