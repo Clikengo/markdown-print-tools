@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-nice-pdf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Render Markdown to pdf with a nice pagination",
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
