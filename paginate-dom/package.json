@@ -1,6 +1,6 @@
 {
   "name": "paginate-dom",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Paginate a DOM element content for printing",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
