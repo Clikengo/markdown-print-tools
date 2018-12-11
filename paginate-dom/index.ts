@@ -465,16 +465,30 @@ export default function paginate(options: {
             }
             // copy structure
             let parent: Element = container;
-            for (let cut of stack) {
+            for (let [i, cut] of stack.entries()) {
                 let new_parent = parent;
                 let after = (cut !== outer) ? cut.node.nextSibling : null;
                 if (cut !== closest) {
-                    let empty_el = copy_element_empty(cut.node as HTMLElement);
+                    let cut_node = cut.node as HTMLElement;
+                    let empty_el = copy_element_empty(cut_node);
                     if (first_page_element_no_margin_top(empty_el.tagName))
                         empty_el.style.marginTop = "0px";
-                    let thead = table_thead(cut.node as HTMLElement);
+                    let thead = table_thead(cut_node);
                     if (thead)
                         empty_el.appendChild(clone_element(thead, []));
+                    if (cut_node.tagName === "OL") {
+                        let next_cut = stack[i + 1];
+                        let li: Node | null = cut_node.firstChild;
+                        let stop_li = next_cut.node.nextSibling;
+                        let start = (cut_node as HTMLOListElement).start;
+                        console.info(li, stop_li);
+                        while (li && li !== stop_li) {
+                            if (li.nodeName === "LI")
+                                start++;
+                            li = li.nextSibling;
+                        }
+                        (empty_el as HTMLOListElement).start = start;
+                    }
                     new_parent.insertBefore(empty_el, insert_before);
                     parent = empty_el;
                     insert_before = null;
