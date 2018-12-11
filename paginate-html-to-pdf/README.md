@@ -16,7 +16,7 @@ TODO:
 
  - [ ] access to paginate options (max_overcut, force_cut_tag_names, ...)
  - [ ] access to TOC generation options
- - [ ] enhance TOC link precesion from page to element
+ - [ ] enhance TOC link precision from page to element
 
 ## Getting started
 
