@@ -205,7 +205,7 @@ export function mdkatex(md: MarkdownIt, options: KatexOptions = {}) {
             let res = katex.renderToString(latex, options);
             if (align !== "center")
                 res = res.replace(/class="katex-display"/, `class="katex-display katex-align-${align}"`);
-            return res;
+            return `<p>${res}</p>`;
         }
         catch (error) {
             if (options.throwOnError) { console.log(error); }
