@@ -79,7 +79,8 @@ export default async function renderPdf(options: {
                                 g.style.removeProperty("opacity");
                             }
                         }
-                        let blob = new Blob([svg.outerHTML], {type : 'image/svg+xml' });
+                        let xml = new XMLSerializer().serializeToString(svg);
+                        let blob = new Blob([xml], {type : 'image/svg+xml' });
                         let url = URL.createObjectURL(blob);
                         svg_el.src = url;
                         await new Promise((resolve, reject) => {
