@@ -16,6 +16,10 @@ export default async function renderMarkdownPdf(options: {
     breaks?: boolean,
     linkify?: boolean,
     toc_levels?: (1 | 2 | 3 | 4 | 5 | 6)[],
+
+    raw_html?: boolean,
+    html?: boolean,
+    debug?: boolean,
 }) : Promise<Buffer> {
     let md = new MarkdownIt({
         html: true,
@@ -32,6 +36,8 @@ export default async function renderMarkdownPdf(options: {
 
     console.info("Markdown to html");
     let body = md.render(options.markdown_content);
+    if (options.raw_html)
+        return Buffer.from(body, "utf8");
     return renderPdf({
         body,
         base_path: options.markdown_path,
@@ -39,5 +45,7 @@ export default async function renderMarkdownPdf(options: {
             path.join(__dirname, "../node_modules/katex/dist/katex.css"),
             ...(options.styles || [])
         ],
+        html: options.html,
+        debug: options.debug,
     });
 }
