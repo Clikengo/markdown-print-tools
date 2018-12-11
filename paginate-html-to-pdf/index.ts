@@ -1,5 +1,7 @@
 import * as puppeteer from 'puppeteer';
 import * as path from 'path';
+import * as fs from 'fs';
+import {promisify} from 'util';
 import paginate, {Page} from 'paginate-dom';
 
 function to_web_uri(absolute_path: string) {
@@ -59,7 +61,36 @@ export default async function renderPdf(options: {
         <base href="${to_web_uri(options.base_path)}">
         <script>
             ${paginate.toString()}
+            async function fix_svg() {
+                // workaround svg print bugs
+                for (let svg_el of document.querySelectorAll('img[src$=".svg"i]')) {
+                    if (svg_el.src.startsWith('file:///')) {
+                        let data = await load_svg(svg_el.src);
+                        let svg_virtual = document.createElement('div');
+                        svg_virtual.innerHTML = data;
+                        let svg = svg_virtual.firstElementChild;
+                        for (let g of svg.querySelectorAll('g')) {
+                            let opacity = g.style.opacity;
+                            if (opacity) {
+                                for (let child of g.children) {
+                                    if (child.style && !child.style.opacity)
+                                        child.style.opacity = opacity;
+                                }
+                                g.style.removeProperty("opacity");
+                            }
+                        }
+                        let blob = new Blob([svg.outerHTML], {type : 'image/svg+xml' });
+                        let url = URL.createObjectURL(blob);
+                        svg_el.src = url;
+                        await new Promise((resolve, reject) => {
+                            svg_el.onload = resolve;
+                            svg_el.onerror = reject;
+                        });
+                    }
+                }
+            }
             async function pdf_chunks() {
+                await fix_svg();
                 let pages = paginate();
                 let toc_marks = [];
                 let chunks = [];
@@ -130,6 +161,13 @@ export default async function renderPdf(options: {
                 }
                 stack.push([lvl, outline]);
             }
+        });
+        await page.exposeFunction('load_svg', async (svg: string) => {
+            if (!svg.startsWith('file:///'))
+                return Promise.reject('load_svg expect a file:/// uri');
+            svg = svg.substring('file:///'.length);
+            let svg_data = await promisify(fs.readFile)(svg, "utf8");
+            return svg_data;
         });
         await page.goto(to_web_uri(path.join(__dirname, "../blank.html")));
         await page.emulateMedia('print');
