@@ -1,6 +1,6 @@
 {
   "name": "paginate-html-to-pdf",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Render HTML to pdf with a nice pagination",
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
