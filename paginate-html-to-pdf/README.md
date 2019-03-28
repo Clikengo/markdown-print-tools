@@ -103,7 +103,7 @@ Or a custom size: `width height`.
 
 #### Paper margin
 
-`paper-orientation` can be either:
+`paper-margin` can be either:
 
  - a single value: `2cm` (2cm top, right, bottom and left)
  - a precise value: `1cm 2cm 3cm 25mm` (1cm top, 2cm right, 3cm bottom and 2.5cm left)
