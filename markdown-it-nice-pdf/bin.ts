@@ -25,13 +25,14 @@ if (program.args.length === 0)
     program.help();
 
 let markdown_path = path.resolve(program.args[0]);
-let pdf_path = path.resolve(program.out || `${markdown_path.replace(/\.\w+$/i, '')}.${program.html ? "html" : "pdf"}`);
+let output_ext = program.rawHtml ? "raw.html" : (program.html ? "html" : "pdf");
+let pdf_path = path.resolve(program.out || `${markdown_path.replace(/\.\w+$/i, '')}.${output_ext}`);
 try {
     renderMarkdownPdf({
         markdown_path: markdown_path,
         markdown_content: readFileSync(markdown_path, 'utf8'),
         styles: program.style.map((s: string) => path.resolve(s)),
-        raw_html: !!program["raw-html"],
+        raw_html: !!program.rawHtml,
         html: !!program.html,
         debug: !!program.debug,
     }).then((buffer : Buffer) => writeFileSync(pdf_path, buffer));
