@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-nice-pdf",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Render Markdown to pdf with a nice pagination",
   "bin": "./dist/bin.js",
   "main": "./dist/index.js",
@@ -28,22 +28,22 @@
   },
   "homepage": "https://github.com/Clikengo/markdown-print-tools/markdown-it-nice-pdf",
   "dependencies": {
-    "commander": "^2.19.0",
-    "highlight.js": "^9.13.1",
-    "katex": "^0.10.0",
+    "commander": "^2.20.0",
+    "highlight.js": "^9.15.6",
+    "katex": "^0.10.1",
     "markdown-it": "^8.4.2",
     "markdown-it-anchor": "^5.0.2",
     "markdown-it-footnote": "^3.0.1",
     "markdown-it-sub": "^1.0.0",
     "markdown-it-sup": "^1.0.0",
-    "markdown-it-table-of-contents": "^0.4.3",
+    "markdown-it-table-of-contents": "^0.4.4",
     "markdown-it-task-lists": "^2.1.1",
     "paginate-html-to-pdf": "^1.1.4"
   },
   "devDependencies": {
     "@types/katex": "^0.5.0",
     "@types/markdown-it": "0.0.7",
-    "@types/node": "^10.12.12",
-    "typescript": "^3.2.2"
+    "@types/node": "^10.14.5",
+    "typescript": "^3.4.5"
   }
 }
