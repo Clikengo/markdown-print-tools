@@ -41,6 +41,8 @@ export default function paginate(options?: {
     force_cut_tag_names?: string[],
     /** maximum allowed overcut in mm, defaults: 8cm */
     max_overcut?: string,
+    /** minimum allowed height in mm, defaults: 2cm */
+    min_height?: string,
     /** force first page element no margin-top, defaults: tagName !== "H1" */
     first_page_element_no_margin_top?: (tagName: string) => boolean,
 }) : {

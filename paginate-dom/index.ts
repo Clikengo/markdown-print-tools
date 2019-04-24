@@ -1,5 +1,5 @@
 
-type CutNode = { tagName: string, node: Node, top: number, bottom: number };
+type CutNode<N = Node> = { tagName: string, node: N, top: number, bottom: number, at: number };
 interface CutPage {
     original_closest: CutNode,
     closest: CutNode,
@@ -59,6 +59,8 @@ export default function paginate(options: {
     force_cut_tag_names?: string[],
     /** maximum allowed overcut in mm, defaults: 8cm */
     max_overcut?: string,
+    /** minimum allowed height in mm, defaults: 8cm */
+    min_height?: string,
     /** force first page element no margin-top, defaults: tagName !== "H1" */
     first_page_element_no_margin_top?: (tagName: string) => boolean,
 
@@ -115,6 +117,7 @@ export default function paginate(options: {
     ///////////////
     // Options
     const MAX_OVERCUT = length_to_px(option(options.max_overcut, "8cm"));
+    const MIN_HEIGHT = length_to_px(option(options.min_height, "2cm"));
     const DEBUG = option(options.DEBUG, false);
     const TRACE = option(options.TRACE, false);
     const PAGINATE = option(options.PAGINATE, true);
@@ -136,6 +139,7 @@ export default function paginate(options: {
     // LIB
     const cut_tag_names = new Set([
         "UL", "OL", "LI",
+        "DL", "DT", "DD",
         "P",
         "PRE", "DIV",
         "TABLE", "TBODY", "TR",
@@ -258,7 +262,7 @@ export default function paginate(options: {
                         ) &&
                         !cut_elements.has(node)
                     ) {
-                        return { tagName: node.tagName, node, top: rect.top, bottom: rect.bottom };
+                        return { tagName: node.tagName, node, top: rect.top, bottom: rect.bottom, at: 0 };
                     }
                 }
             }
@@ -289,7 +293,7 @@ export default function paginate(options: {
         if (!el)
             return null;
         let rect = el.getBoundingClientRect();
-        return { tagName: el.tagName, node: el, top: rect.top, bottom: rect.bottom };
+        return { tagName: el.tagName, node: el, top: rect.top, bottom: rect.bottom, at: 0 };
     }
 
     function copy_element_empty(element: HTMLElement, mark_cut = true) : HTMLElement {
@@ -357,6 +361,55 @@ export default function paginate(options: {
                 console.info(`replaced`, last_closest, "by", closest);
         } while (last_closest !== closest);
         return closest;
+    }
+
+    function leaf_bounding_box(node: Text, start: number, end: number) {
+        let range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, end);
+        return range.getBoundingClientRect();
+    }
+
+    function find_leaf_cut(node: Node, h: number) : CutNode<Text> | null {
+        for (node of node.childNodes) {
+            if (node instanceof Text) {
+                let rect = leaf_bounding_box(node, 0, node.wholeText.length);
+                if (rect.bottom > h)
+                    return { tagName: "#text", node: node, top: rect.top, bottom: rect.bottom, at: 0 };
+            }
+            else {
+                let cut = find_leaf_cut(node, h);
+                if (cut)
+                    return cut;
+            }
+        }
+        return null;
+    }
+
+    function fix_overflow(closest: CutNode) {
+        let overcut = expected_page_bottom - closest.top;
+        let overflow = closest.bottom - expected_page_bottom;
+        let bottom = expected_page_bottom;
+        if (DEBUG) console.info(`overflow by ${Math.round(overflow)} detected (overcut: ${Math.round(overcut)}), closest:`, closest, MIN_HEIGHT);
+        /// let's find the best position to cut this overflow by abusing the range API
+        let cut_text = find_leaf_cut(closest.node, bottom);
+        if (!cut_text)
+            return null;
+
+        // let's find the best position to cut this text
+        if (cut_text.top < bottom) {
+            let i = 1, len = cut_text.node.wholeText.length;
+            for (; i < len; i++) {
+                let rect = leaf_bounding_box(cut_text.node, i - 1 , i);
+                if (rect.bottom > bottom) {
+                    cut_text.top = rect.top;
+                    break;
+                }
+            }
+            cut_text.at = i - 1;
+        }
+        if (TRACE) console.info(`cut_at`, cut_text);
+        return cut_text;
     }
 
     function table_thead(element: HTMLElement) : HTMLElement | null {
@@ -491,6 +544,12 @@ export default function paginate(options: {
                     parent = empty_el;
                     insert_before = null;
                 }
+                else if (cut.at > 0) {
+                    let cut_text = (cut.node as Text);
+                    let cpy_text = document.createTextNode(cut_text.wholeText.substring(cut.at));
+                    cut_text.textContent = cut_text.wholeText.substring(0, cut.at);
+                    new_parent.insertBefore(cpy_text, insert_before);
+                }
                 else {
                     new_parent.insertBefore(cut.node, insert_before);
                     let cut_el = next_element_sibling(cut.node);
@@ -587,10 +646,11 @@ export default function paginate(options: {
             expected_page_bottom = top + content_height + margin_top;
             let stack = next_cut_stack(container.firstElementChild);
             while (stack.length) {
+                if (TRACE) console.info("stack raw  ", stack);
                 let outer = stack[0];
                 let closest = stack[stack.length - 1];
                 let original_closest = { ...closest };
-                cut_elements.add(closest.node);
+                cut_elements.add(original_closest.node);
 
                 // find the real closest node with consideration of inline nodes (span, b, #text)
                 // this assume white-space: normal to work correctly
@@ -631,6 +691,46 @@ export default function paginate(options: {
                 if (closest === outer) {
                     closest = outer = stack[0] = fix_weird_cut_positions(closest, expected_page_bottom);
                 }
+                if (TRACE) console.info("stack fixed", stack);
+
+                let parents_top_height = structure_top_height(stack, outer, closest);
+                let next_expected_page_bottom = closest.top + content_height - parents_top_height;
+                let overcut = expected_page_bottom - closest.top;
+                let overflow = closest.bottom - next_expected_page_bottom;
+                let force_next = false;
+
+                if (overflow > 0 && overcut < MIN_HEIGHT && MIN_HEIGHT < content_height) {
+                    // handle the overflow in the next page
+                    cut_elements.delete(original_closest.node);
+                } else if (/*overcut > MAX_OVERCUT ||*/ overflow > 0) {
+                    // handle overflow or very big overcut
+                    let closest_text = fix_overflow(closest);
+                    if (closest_text) {
+                        if (closest_text.top > closest.top)
+                            cut_elements.delete(original_closest.node);
+                        let node = closest_text.node.parentNode;
+                        let stack_top: CutNode[] = [closest_text];
+                        while (node && node != closest.node) {
+                            let rect = (node as Element).getBoundingClientRect();
+                            stack_top.push({
+                                tagName: node.nodeName,
+                                node: node,
+                                top: rect.top,
+                                bottom: rect.bottom,
+                                at: 0,
+                            });
+                            node = node.parentNode;
+                        }
+                        closest = closest_text;
+                        stack.push(...stack_top.reverse());
+                        parents_top_height = structure_top_height(stack, outer, closest);
+                        next_expected_page_bottom = closest.top + content_height - parents_top_height;
+                    }
+                    else {
+                        console.warn(`unable to fix overflow ${overflow}`, closest);
+                        force_next = true;
+                    }
+                }
 
                 // page count
                 if (cuts.length === 0) {
@@ -641,9 +741,6 @@ export default function paginate(options: {
                 page++;
                 num_pages.num_pages++;
 
-                // compute structure top/bottom height
-                let parents_top_height = structure_top_height(stack, outer, closest);
-                let next_expected_page_bottom = closest.top + content_height - parents_top_height; // - parents_bottom_height;
                 if (DEBUG) console.info(`idx=${cut_counter} page=${page}
 ${Math.round(expected_page_bottom)} -> ${Math.round(next_expected_page_bottom)} = ${Math.round(closest.top)} + ${Math.round(content_height)} - ${Math.round(parents_top_height)}
 expected_overcut: ${Math.round(expected_page_bottom - closest.top)}
@@ -667,14 +764,8 @@ stack:
                 };
                 cuts.push(cut_page);
                 cut_counter++;
-                if (next_expected_page_bottom <= expected_page_bottom) {
-                    console.error(`stopping page cut calculation, infinite loop detected`);
-                    console.error(` next_expected_page_bottom:${next_expected_page_bottom} < expected_page_bottom:${expected_page_bottom}`);
-                    console.error(` current page_cut`, cut_page);
-                    throw new Error(`infinite loop detected`);
-                }
                 expected_page_bottom = next_expected_page_bottom;
-                stack = next_cut_stack(outer.node);
+                stack = next_cut_stack(force_next ? next_element_sibling(outer.node) : outer.node);
             }
         }
 
