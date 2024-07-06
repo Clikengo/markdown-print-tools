@@ -216,7 +216,10 @@ export default function paginate(options: {
             else if (typeof cut !== "boolean") {
                 stack.push(cut);
                 if (cut.top < expected_page_bottom && !force_closest_tag_names.has(cut.tagName)) {
-                    node = cut.node.firstChild;
+                    const style = window.getComputedStyle(cut.node as HTMLElement);
+                    if (style.display !== 'flex' || !style.flexDirection.startsWith('row')) {
+                        node = cut.node.firstChild;
+                    }
                 }
             }
         }
